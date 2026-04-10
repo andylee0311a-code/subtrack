@@ -18,11 +18,8 @@ import {
 } from 'lucide-react';
 
 // --- Gemini API 配置 ---
-// 讀取 Vercel 或 .env 裡的環境變數
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "如果您想暫時寫死金鑰測試，可貼在這裡"; 
-
-// 將模型改為 Google 對外公開的正式版
-const GEMINI_MODEL = "gemini-1.5-flash";z
+const apiKey = "AIzaSyAj7gCFIfH7HUZGey3MnuvSWVhIv9UqOPM"; 
+const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
 
 const App = () => {
   const [subscriptions, setSubscriptions] = useState([
@@ -45,6 +42,15 @@ const App = () => {
   // 新增功能狀態
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [historyMonths, setHistoryMonths] = useState(6);
+
+  // 監聽深色模式切換，將 dark class 應用到全域 html 標籤
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // --- Gemini API 呼叫函數 (包含指數退避重試機制) ---
   const callGemini = async (prompt, systemInstruction, isJson = false) => {
@@ -167,10 +173,9 @@ const App = () => {
   const maxHistoryAmount = Math.max(...historyData.map(d => d.amount), 1);
 
   return (
-    <div className={isDarkMode ? 'dark' : ''}>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans p-4 md:p-8 transition-colors duration-300 relative">
-        <div className="max-w-4xl mx-auto pb-20">
-          {/* Header */}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans p-4 md:p-8 transition-colors duration-300 relative">
+      <div className="max-w-4xl mx-auto pb-20">
+        {/* Header */}
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -447,7 +452,6 @@ const App = () => {
           <Home size={24} />
         </button>
       </div>
-    </div>
   );
 };
 
