@@ -17,9 +17,11 @@ import {
   BarChart3
 } from 'lucide-react';
 
-// --- Gemini API 配置 ---
-const apiKey = "AIzaSyAj7gCFIfH7HUZGey3MnuvSWVhIv9UqOPM"; 
-const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+// 讀取您本地 .env 或 Vercel 設定的環境變數
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY; 
+
+// 改用 Google 對外公開的正式版模型
+const GEMINI_MODEL = "gemini-1.5-flash";
 
 const App = () => {
   const [subscriptions, setSubscriptions] = useState([
@@ -417,6 +419,7 @@ const App = () => {
                     >
                       <option value="娛樂">娛樂</option>
                       <option value="工作">工作</option>
+                      <option value="工作">電信費</option>
                       <option value="音樂">音樂</option>
                       <option value="雲端">雲端</option>
                       <option value="AI 工具">AI 工具</option>
