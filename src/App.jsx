@@ -8,15 +8,33 @@ import {
   Sun,
   Moon,
   Home,
-  BarChart3
+  BarChart3,
+  Loader2
 } from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
+
+// Firebase 初始化設定 (支援雲端儲存)
+const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+const firebaseConfig = firebaseConfigStr ? JSON.parse(firebaseConfigStr) : {
+    apiKey: "", // 部署到本地或 Vercel 時，請替換回 import.meta.env.VITE_FIREBASE_API_KEY
+    authDomain: "", // 部署到本地或 Vercel 時，請替換回 import.meta.env.VITE_FIREBASE_AUTH_DOMAIN
+    projectId: "" // 部署到本地或 Vercel 時，請替換回 import.meta.env.VITE_FIREBASE_PROJECT_ID
+};
+
+let app, auth, db;
+if (firebaseConfig && firebaseConfig.apiKey) {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+}
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'subtrack-app';
 
 const App = () => {
-  const [subscriptions, setSubscriptions] = useState([
-    { id: 1, name: 'Netflix', price: 390, cycle: 'Monthly', category: '娛樂', color: 'bg-red-500' },
-    { id: 2, name: 'Spotify', price: 149, cycle: 'Monthly', category: '音樂', color: 'bg-green-500' },
-    { id: 3, name: 'iCloud+', price: 90, cycle: 'Monthly', category: '雲端', color: 'bg-blue-500' }
-  ]);
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [isAdding, setIsAdding] = useState(false);
   const [newSub, setNewSub] = useState({ name: '', price: '', cycle: 'Monthly', category: '其他' });
@@ -24,6 +42,49 @@ const App = () => {
   // 顯示相關狀態
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [historyMonths, setHistoryMonths] = useState(6);
+
+  // (1) 初始化 Firebase 身分驗證 (匿名登入)
+  useEffect(() => {
+    if (!auth) {
+      setIsLoading(false);
+      return;
+    }
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (e) {
+        console.error("Auth error", e);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
+
+  // (2) 監聽雲端資料庫的訂閱項目
+  useEffect(() => {
+    if (!user || !db) {
+      setIsLoading(false);
+      return;
+    }
+    const subsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'subscriptions');
+    const unsubscribe = onSnapshot(subsRef, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // 根據建立時間排序確保順序一致
+      data.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      setSubscriptions(data);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Firestore error:", error);
+      setIsLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, [user]);
 
   // 監聽深色模式切換
   useEffect(() => {
@@ -44,19 +105,38 @@ const App = () => {
 
   const yearlyTotal = monthlyTotal * 12;
 
-  const addSubscription = () => {
+  const addSubscription = async () => {
     if (!newSub.name || !newSub.price) return;
     const colors = ['bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500'];
-    setSubscriptions([
-      ...subscriptions,
-      { ...newSub, id: Date.now(), color: colors[Math.floor(Math.random() * colors.length)] }
-    ]);
+    
+    const newEntry = { 
+      ...newSub, 
+      color: colors[Math.floor(Math.random() * colors.length)],
+      createdAt: Date.now()
+    };
+
+    if (user && db) {
+      // 儲存至 Firebase 雲端
+      const docId = Date.now().toString();
+      const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'subscriptions', docId);
+      await setDoc(docRef, newEntry);
+    } else {
+      // 無 Firebase 設定時的本地暫存
+      setSubscriptions([...subscriptions, { ...newEntry, id: Date.now() }]);
+    }
+    
     setNewSub({ name: '', price: '', cycle: 'Monthly', category: '其他' });
     setIsAdding(false);
   };
 
-  const removeSub = (id) => {
-    setSubscriptions(subscriptions.filter(s => s.id !== id));
+  const removeSub = async (id) => {
+    if (user && db) {
+      // 刪除雲端資料
+      const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'subscriptions', id.toString());
+      await deleteDoc(docRef);
+    } else {
+      setSubscriptions(subscriptions.filter(s => s.id !== id));
+    }
   };
 
   // 生成歷史支出模擬數據
@@ -90,6 +170,7 @@ const App = () => {
               <p className="text-slate-500 dark:text-slate-400 italic">個人數位財務助手</p>
             </div>
             <div className="flex gap-2 items-center">
+              {isLoading && <Loader2 className="animate-spin text-indigo-500 mr-2" size={20} />}
               <button 
                 onClick={() => setIsDarkMode(!isDarkMode)}
                 className="p-2 mr-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
@@ -266,8 +347,6 @@ const App = () => {
                     >
                       <option value="娛樂">娛樂</option>
                       <option value="工作">工作</option>
-                       <option value="工作">電信</option>
-                       <option value="工作">交通</option>
                       <option value="音樂">音樂</option>
                       <option value="雲端">雲端</option>
                       <option value="AI 工具">AI 工具</option>
