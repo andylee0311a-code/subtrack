@@ -266,6 +266,8 @@ const App = () => {
                     >
                       <option value="娛樂">娛樂</option>
                       <option value="工作">工作</option>
+                       <option value="工作">電信</option>
+                       <option value="工作">交通</option>
                       <option value="音樂">音樂</option>
                       <option value="雲端">雲端</option>
                       <option value="AI 工具">AI 工具</option>
