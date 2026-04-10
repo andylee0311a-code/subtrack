@@ -17,7 +17,7 @@ import {
   BarChart3
 } from 'lucide-react';
 
-// 讀取您本地 .env 或 Vercel 設定的環境變數
+// 讀取您本地 .env 或 Vercel 上的環境變數
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY; 
 
 // 改用 Google 對外公開的正式版模型
