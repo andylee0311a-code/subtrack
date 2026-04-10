@@ -18,8 +18,11 @@ import {
 } from 'lucide-react';
 
 // --- Gemini API 配置 ---
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
-const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+// 讀取 Vercel 或 .env 裡的環境變數
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "如果您想暫時寫死金鑰測試，可貼在這裡"; 
+
+// 將模型改為 Google 對外公開的正式版
+const GEMINI_MODEL = "gemini-1.5-flash";z
 
 const App = () => {
   const [subscriptions, setSubscriptions] = useState([
